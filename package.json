@@ -1,5 +1,5 @@
 {
-  "name": "@artale/pi-recon",
+  "name": "pi-recon-tools",
   "version": "1.0.0",
   "description": "Security reconnaissance toolkit. Headers audit, SSL check, DNS, port scan, tech fingerprinting, path discovery.",
   "keywords": ["pi-package", "pi-extension", "security", "recon", "pentest", "redteam", "headers"],
