@@ -2,9 +2,30 @@
   "name": "pi-recon-tools",
   "version": "1.0.0",
   "description": "Security reconnaissance toolkit. Headers audit, SSL check, DNS, port scan, tech fingerprinting, path discovery.",
-  "keywords": ["pi-package", "pi-extension", "security", "recon", "pentest", "redteam", "headers"],
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "security",
+    "recon",
+    "pentest",
+    "redteam",
+    "headers"
+  ],
   "license": "MIT",
   "author": "artale",
-  "repository": { "type": "git", "url": "https://github.com/arosstale/pi-recon.git" },
-  "extensions": ["extensions/pi-recon.ts"]
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arosstale/pi-recon.git"
+  },
+  "extensions": [
+    "extensions/pi-recon.ts"
+  ],
+  "pi": {
+    "commands": [
+      "recon"
+    ],
+    "tools": [
+      "security_recon"
+    ]
+  }
 }
