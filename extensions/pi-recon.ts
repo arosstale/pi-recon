@@ -121,17 +121,46 @@ function checkDNS(host: string): string {
 
 // ── Port Scan ───────────────────────────────────────────────────────────────
 
+// Try nmap via WSL for real TCP SYN scan, fall back to fetch-based probe
+function tryNmapWSL(host: string, ports: number[]): { port: number; state: string; service: string }[] | null {
+  try {
+    const portList = ports.join(",");
+    const out = execSync(`wsl nmap -sT -T4 --open -p ${portList} ${host} 2>/dev/null`, {
+      encoding: "utf-8", timeout: 30000,
+    });
+    const results: { port: number; state: string; service: string }[] = [];
+    for (const line of out.split("\n")) {
+      const m = line.match(/^(\d+)\/tcp\s+(\w+)\s+(.+)/);
+      if (m) results.push({ port: parseInt(m[1]), state: m[2], service: m[3].trim() });
+    }
+    return results.length > 0 ? results : null;
+  } catch { return null; }
+}
+
 async function scanPorts(host: string): Promise<string> {
   const lines: string[] = [section("Common Ports")];
   const ports = [21, 22, 25, 53, 80, 110, 143, 443, 445, 993, 995, 3306, 3389, 5432, 6379, 8080, 8443, 9090];
-  const results: { port: number; open: boolean; service: string }[] = [];
   const services: Record<number, string> = {
     21: "FTP", 22: "SSH", 25: "SMTP", 53: "DNS", 80: "HTTP", 110: "POP3",
     143: "IMAP", 443: "HTTPS", 445: "SMB", 993: "IMAPS", 995: "POP3S",
     3306: "MySQL", 3389: "RDP", 5432: "PostgreSQL", 6379: "Redis", 8080: "HTTP-Alt", 8443: "HTTPS-Alt", 9090: "Proxy"
   };
 
-  // Parallel TCP connect with timeout
+  // Try nmap via WSL first (real TCP scan)
+  const nmapResults = tryNmapWSL(host, ports);
+  if (nmapResults) {
+    lines.push(`  ${D}(nmap via WSL — real TCP connect scan)${RST}`);
+    for (const r of nmapResults) {
+      lines.push(`  ${GREEN}${B}${String(r.port).padEnd(6)}${RST} ${r.service}`);
+    }
+    lines.push(D + `\n  Scanned ${ports.length} ports via nmap` + RST);
+    return lines.join("\n");
+  }
+
+  // Fallback: fetch-based probe (HTTP only, not real TCP)
+  lines.push(`  ${D}(fetch-based probe — install nmap in WSL for real TCP scan)${RST}`);
+  const results: { port: number; open: boolean; service: string }[] = [];
+
   const checks = ports.map(port => {
     return new Promise<{ port: number; open: boolean }>(resolve => {
       const controller = new AbortController();
@@ -140,7 +169,6 @@ async function scanPorts(host: string): Promise<string> {
         .then(() => { clearTimeout(timer); resolve({ port, open: true }); })
         .catch(e => {
           clearTimeout(timer);
-          // "Connection refused" = closed, timeout/other = might be filtered
           resolve({ port, open: e.message?.includes("refused") ? false : !e.message?.includes("abort") });
         });
     });
